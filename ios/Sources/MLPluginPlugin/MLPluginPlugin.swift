@@ -10,7 +10,8 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "MLPluginPlugin"
     public let jsName = "MLPlugin"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "classifyImage", returnType: CAPPluginReturnPromise)
     ]
     private let implementation = MLPlugin()
 
@@ -19,5 +20,23 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve([
             "value": implementation.echo(value)
         ])
+    }
+    
+    @objc func classifyImage(_ call: CAPPluginCall) {
+        guard let imagePath = call.getString("imagePath") else {
+            call.reject("imagePath is required")
+            return
+        }
+        
+        implementation.classifyImage(imagePath: imagePath) { result in
+            switch result {
+            case .success(let predictions):
+                call.resolve([
+                    "predictions": predictions
+                ])
+            case .failure(let error):
+                call.reject("Classification failed: \(error.localizedDescription)")
+            }
+        }
     }
 }
