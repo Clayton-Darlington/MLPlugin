@@ -1,11 +1,11 @@
 import Foundation
-import Vision
-import CoreML
 import UIKit
+import MLKitImageLabeling
+import MLKitVision
 
 @objc public class MLPlugin: NSObject {
     
-    private var customModel: VNCoreMLModel?
+    private var imageLabeler: ImageLabeler
     
     @objc public func echo(_ value: String) -> String {
         print(value)
@@ -13,122 +13,54 @@ import UIKit
     }
     
     override init() {
-        super.init()
-        setupModel()
-    }
-    
-    private func setupModel() {
-        // Try to load FastViTMA36F16Headless model
-        guard let modelURL = Bundle.main.url(forResource: "FastViTMA36F16Headless", withExtension: "mlmodelc") else {
-            print("FastViTMA36F16Headless.mlmodelc not found - will use default Vision classification")
-            return
-        }
+        // Initialize MLKit Image Labeler with default options (same as Android)
+        let options = ImageLabelerOptions()
+        options.confidenceThreshold = 0.7
+        imageLabeler = ImageLabeler.imageLabeler(options: options)
         
-        do {
-            let model = try MLModel(contentsOf: modelURL)
-            self.customModel = try VNCoreMLModel(for: model)
-            print("Successfully loaded FastViTMA36F16Headless custom model")
-        } catch {
-            print("Failed to load FastViTMA36F16Headless model: \(error) - will use default Vision classification")
-        }
+        super.init()
+        
+        print("MLPlugin initialized - using MLKit Image Labeling")
     }
     
 
     
     public func classifyImage(base64Image: String, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
+        print("classifyImage called on iOS with base64 image length: \(base64Image.count)")
+        
         // Convert base64 string to UIImage
         guard let image = loadImageFromBase64(base64Image) else {
             completion(.failure(NSError(domain: "MLPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not decode base64 image data"])))
             return
         }
         
-        // Convert UIImage to CIImage
-        guard let ciImage = CIImage(image: image) else {
-            completion(.failure(NSError(domain: "MLPlugin", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not convert image to CIImage"])))
-            return
-        }
+        // Convert UIImage to MLKit VisionImage
+        let visionImage = VisionImage(image: image)
+        visionImage.orientation = image.imageOrientation
         
-        // Use custom model if available, otherwise fall back to Vision's built-in classification
-        if let customModel = self.customModel {
-            // Use custom FastViTMA36F16Headless model
-            let request = VNCoreMLRequest(model: customModel) { request, error in
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-                
-                guard let results = request.results as? [VNClassificationObservation] else {
-                    completion(.failure(NSError(domain: "MLPlugin", code: 3, userInfo: [NSLocalizedDescriptionKey: "No classification results from custom model"])))
-                    return
-                }
-                
-                // Convert results to the expected format
-                let predictions = results.prefix(5).map { result in
-                    return [
-                        "label": result.identifier,
-                        "confidence": Double(result.confidence)
-                    ] as [String: Any]
-                }
-                
-                print("Classification completed using FastViTMA36F16Headless custom model")
-                completion(.success(Array(predictions)))
+        // Process image with MLKit (same as Android implementation)
+        imageLabeler.process(visionImage) { labels, error in
+            if let error = error {
+                print("MLKit classification failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
             }
             
-            // Configure the custom model request
-            request.imageCropAndScaleOption = .centerCrop
-            
-            // Perform the request
-            let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
-            
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try handler.perform([request])
-                } catch {
-                    completion(.failure(error))
-                }
+            guard let labels = labels, !labels.isEmpty else {
+                completion(.failure(NSError(domain: "MLPlugin", code: 3, userInfo: [NSLocalizedDescriptionKey: "No classification results from MLKit"])))
+                return
             }
             
-        } else if #available(iOS 13.0, *) {
-            // Fall back to Vision's built-in image classification
-            let request = VNClassifyImageRequest { request, error in
-                if let error = error {
-                    completion(.failure(error))
-                    return
-                }
-                
-                guard let results = request.results as? [VNClassificationObservation] else {
-                    completion(.failure(NSError(domain: "MLPlugin", code: 3, userInfo: [NSLocalizedDescriptionKey: "No classification results from default Vision"])))
-                    return
-                }
-                
-                // Convert results to the expected format
-                let predictions = results.prefix(5).map { result in
-                    return [
-                        "label": result.identifier,
-                        "confidence": Double(result.confidence)
-                    ] as [String: Any]
-                }
-                
-                print("Classification completed using default Vision framework")
-                completion(.success(Array(predictions)))
+            // Convert MLKit results to our format (same as Android)
+            let predictions: [[String: Any]] = labels.prefix(5).map { label in
+                return [
+                    "label": label.text,
+                    "confidence": Double(label.confidence)
+                ]
             }
             
-            // VNClassifyImageRequest doesn't have imageCropAndScaleOption
-            // It handles image scaling automatically
-            
-            // Perform the request
-            let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
-            
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try handler.perform([request])
-                } catch {
-                    completion(.failure(error))
-                }
-            }
-        } else {
-            // Fallback for iOS < 13.0
-            completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "Classification requires iOS 13.0 or later"])))
+            print("MLKit classification completed with \(labels.count) predictions")
+            completion(.success(predictions))
         }
     }
     

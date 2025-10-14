@@ -32,25 +32,13 @@ npm link ml-plugin
 
 ### iOS Setup
 
-iOS implementation uses a hybrid approach with automatic fallback:
+iOS implementation uses Google's MLKit (same as Android):
 
-1. **Primary**: Looks for `FastViTMA36F16Headless.mlmodelc` custom model in app bundle
-2. **Fallback**: Uses Apple's built-in `VNClassifyImageRequest` if custom model not found
-3. **No setup required**: Works out of the box with fallback
-4. **Optional enhancement**: Add `FastViTMA36F16Headless.mlmodelc` to app bundle for custom model
-5. Requires iOS 13.0 or later
-
-#### Adding Custom Model (Optional)
-
-To use the FastViTMA36F16Headless custom model:
-
-1. Obtain `FastViTMA36F16Headless.mlmodel` file
-2. Convert to `.mlmodelc` using Xcode or coremltools:
-   ```bash
-   xcrun coremlcompiler compile FastViTMA36F16Headless.mlmodel ./
-   ```
-3. Add `FastViTMA36F16Headless.mlmodelc` to your iOS app bundle in Xcode
-4. Ensure it's added to your app target's "Copy Bundle Resources"
+1. No additional setup required
+2. MLKit will automatically download base models on first use  
+3. Uses Google's on-device image labeling models
+4. Requires internet connection for initial model download
+5. Requires iOS 14.0 or later
 
 ### Android Setup
 
@@ -160,6 +148,6 @@ Classify an image using Vision and CoreML (iOS only, stubs for other platforms)
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| iOS      | ✅ Full | Uses Vision + CoreML for image classification |
-| Android  | ✅ Full | Uses MLKit for image classification |
+| iOS      | ✅ Full | Uses Google MLKit for image classification |
+| Android  | ✅ Full | Uses Google MLKit for image classification |
 | Web      | 🚧 Stub | Returns mock predictions |

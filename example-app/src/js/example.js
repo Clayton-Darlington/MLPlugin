@@ -65,9 +65,9 @@ function getPlatformInfo() {
     const platform = window.Capacitor?.getPlatform?.() || 'web';
     switch (platform) {
         case 'ios':
-            return 'iOS (Vision + CoreML)';
-        case 'android':
-            return 'Android (MLKit)';
+            return 'iOS (Google MLKit)';
+        case 'android':  
+            return 'Android (Google MLKit)';
         case 'web':
             return 'Web (Stub)';
         default:
