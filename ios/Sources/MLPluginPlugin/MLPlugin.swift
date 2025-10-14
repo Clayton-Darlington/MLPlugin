@@ -2,7 +2,8 @@ import Foundation
 import UIKit
 import MLKitImageLabeling
 import MLKitVision
-import MediaPipeTasksGenai
+import MediaPipeTasksGenAI
+import MediaPipeTasksGenAIC
 
 @objc public class MLPlugin: NSObject {
     
@@ -69,7 +70,7 @@ import MediaPipeTasksGenai
         }
     }
     
-    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, downloadAtRuntime: Bool = false, downloadUrl: String? = nil, modelFileName: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, downloadAtRuntime: Bool = false, downloadUrl: String? = nil, modelFileName: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) async {
         print("generateText called on iOS with prompt: \(prompt)")
         
         // Initialize LLM if not already done
@@ -97,10 +98,9 @@ import MediaPipeTasksGenai
                     return
                 }
                 
-                let options = LlmInferenceOptions()
-                options.baseOptions.modelPath = validModelPath
+                let options = LlmInference.Options(modelPath: validModelPath)
                 options.maxTokens = maxTokens
-                options.topk = 40
+                options.topK = 40
                 options.temperature = temperature
                 options.randomSeed = 101
                 

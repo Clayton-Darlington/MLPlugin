@@ -56,19 +56,21 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
         let downloadUrl = modelConfig?["downloadUrl"] as? String
         let modelFileName = modelConfig?["modelFileName"] as? String
         
-        implementation.generateText(
-            prompt: prompt, 
-            maxTokens: maxTokens, 
-            temperature: temperature,
-            downloadAtRuntime: downloadAtRuntime,
-            downloadUrl: downloadUrl,
-            modelFileName: modelFileName
-        ) { result in
-            switch result {
-            case .success(let response):
-                call.resolve(response)
-            case .failure(let error):
-                call.reject("Text generation failed: \(error.localizedDescription)")
+        Task {
+            await implementation.generateText(
+                prompt: prompt, 
+                maxTokens: maxTokens, 
+                temperature: temperature,
+                downloadAtRuntime: downloadAtRuntime,
+                downloadUrl: downloadUrl,
+                modelFileName: modelFileName
+            ) { result in
+                switch result {
+                case .success(let response):
+                    call.resolve(response)
+                case .failure(let error):
+                    call.reject("Text generation failed: \(error.localizedDescription)")
+                }
             }
         }
     }
