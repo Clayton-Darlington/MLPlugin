@@ -2,10 +2,12 @@ import Foundation
 import UIKit
 import MLKitImageLabeling
 import MLKitVision
+import MediaPipeTasksGenAI
 
 @objc public class MLPlugin: NSObject {
     
     private var imageLabeler: ImageLabeler
+    private var llmInference: LlmInference?
     
     @objc public func echo(_ value: String) -> String {
         print(value)
@@ -17,6 +19,9 @@ import MLKitVision
         let options = ImageLabelerOptions()
         options.confidenceThreshold = 0.7
         imageLabeler = ImageLabeler.imageLabeler(options: options)
+        
+        // Initialize LLM Inference (will be configured when first used)
+        llmInference = nil
         
         super.init()
         
@@ -61,6 +66,46 @@ import MLKitVision
             
             print("MLKit classification completed with \(labels.count) predictions")
             completion(.success(predictions))
+        }
+    }
+    
+    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+        print("generateText called on iOS with prompt: \(prompt)")
+        
+        // Initialize LLM if not already done
+        if llmInference == nil {
+            do {
+                let options = LlmInferenceOptions()
+                // Note: For a real implementation, you would need to add a model file to your bundle
+                // For now, we'll create a stub that indicates the model is missing
+                options.maxTokens = maxTokens
+                options.temperature = temperature
+                options.randomSeed = 101
+                
+                // This will fail without a real model, so we'll catch and provide a meaningful error
+                llmInference = try LlmInference(options: options)
+                print("LLM Inference initialized successfully")
+            } catch {
+                print("Failed to initialize LLM Inference: \(error)")
+                completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "LLM model not found. Please add a compatible model file (e.g., gemma-2-2b-it-gpu-int8.bin) to your iOS app bundle."])))
+                return
+            }
+        }
+        
+        // Generate response using MediaPipe LLM Inference
+        do {
+            let result = try llmInference!.generateResponse(inputText: prompt)
+            
+            let response: [String: Any] = [
+                "response": result,
+                "tokensUsed": result.count / 4 // Rough estimate of token count
+            ]
+            
+            print("LLM generation completed successfully")
+            completion(.success(response))
+        } catch {
+            print("LLM generation failed: \(error.localizedDescription)")
+            completion(.failure(error))
         }
     }
     

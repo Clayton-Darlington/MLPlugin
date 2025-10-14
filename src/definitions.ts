@@ -23,6 +23,32 @@ export interface ClassifyImageResult {
   predictions: ClassificationResult[];
 }
 
+export interface LLMInferenceOptions {
+  /**
+   * The text prompt to send to the LLM
+   */
+  prompt: string;
+  /**
+   * Maximum number of tokens to generate (default: 100)
+   */
+  maxTokens?: number;
+  /**
+   * Temperature for controlling randomness (0.0 to 1.0, default: 0.7)
+   */
+  temperature?: number;
+}
+
+export interface LLMInferenceResult {
+  /**
+   * The generated text response from the LLM
+   */
+  response: string;
+  /**
+   * Number of tokens used in the generation
+   */
+  tokensUsed?: number;
+}
+
 export interface MLPluginPlugin {
   /**
    * Echo back a string value
@@ -44,4 +70,22 @@ export interface MLPluginPlugin {
    * ```
    */
   classifyImage(options: ClassifyImageOptions): Promise<ClassifyImageResult>;
+
+  /**
+   * Generate text using on-device LLM inference
+   * 
+   * @param options - Configuration object containing the prompt and generation parameters
+   * @returns Promise resolving to generated text response
+   * 
+   * @example
+   * ```typescript
+   * const result = await MLPlugin.generateText({
+   *   prompt: 'Explain quantum computing in simple terms',
+   *   maxTokens: 150,
+   *   temperature: 0.7
+   * });
+   * console.log(result.response);
+   * ```
+   */
+  generateText(options: LLMInferenceOptions): Promise<LLMInferenceResult>;
 }

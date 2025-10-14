@@ -14,5 +14,7 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '14.0'
   s.dependency 'Capacitor'
   s.dependency 'GoogleMLKit/ImageLabeling', '~> 4.0.0'
+  s.dependency 'MediaPipeTasksGenAI'
+  s.dependency 'MediaPipeTasksGenAIC'
   s.swift_version = '5.1'
 end

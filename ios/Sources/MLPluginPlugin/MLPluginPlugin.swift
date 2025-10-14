@@ -11,7 +11,8 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "MLPlugin"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "classifyImage", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "classifyImage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "generateText", returnType: CAPPluginReturnPromise)
     ]
     private let implementation = MLPlugin()
 
@@ -36,6 +37,25 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
                 ])
             case .failure(let error):
                 call.reject("Classification failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    @objc func generateText(_ call: CAPPluginCall) {
+        guard let prompt = call.getString("prompt") else {
+            call.reject("prompt is required")
+            return
+        }
+        
+        let maxTokens = call.getInt("maxTokens") ?? 100
+        let temperature = call.getFloat("temperature") ?? 0.7
+        
+        implementation.generateText(prompt: prompt, maxTokens: maxTokens, temperature: temperature) { result in
+            switch result {
+            case .success(let response):
+                call.resolve(response)
+            case .failure(let error):
+                call.reject("Text generation failed: \(error.localizedDescription)")
             }
         }
     }

@@ -61,13 +61,60 @@ window.testClassifyImage = async () => {
     }
 }
 
+window.testGenerateText = async () => {
+    try {
+        const promptInput = document.getElementById("promptInput");
+        const prompt = promptInput.value || 'Explain artificial intelligence in simple terms';
+        
+        console.log('Starting text generation...');
+        const resultsDiv = document.getElementById('textResults');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = '<h3>Generating text...</h3><div>Please wait...</div>';
+        }
+        
+        const result = await MLPlugin.generateText({ 
+            prompt: prompt,
+            maxTokens: 150,
+            temperature: 0.7
+        });
+        
+        console.log('Text generation results:', result);
+        
+        // Display results
+        if (resultsDiv) {
+            resultsDiv.innerHTML = `
+                <h3>Generated Text:</h3>
+                <div style="padding: 12px; background: #f9f9f9; border-radius: 4px; margin: 8px 0; line-height: 1.5;">
+                    ${result.response}
+                </div>
+                <div style="margin-top: 16px; padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 12px;">
+                    <strong>Platform:</strong> ${getPlatformInfo()}<br>
+                    <strong>Tokens Used:</strong> ${result.tokensUsed || 'N/A'}<br>
+                    <strong>Prompt:</strong> "${prompt}"
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('Text generation failed:', error);
+        const resultsDiv = document.getElementById('textResults');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = `
+                <div style="color: red; padding: 8px; border: 1px solid red; border-radius: 4px;">
+                    <strong>Error:</strong> ${error.message || error}
+                </div>
+            `;
+        }
+    }
+}
+
 function getPlatformInfo() {
     const platform = window.Capacitor?.getPlatform?.() || 'web';
     switch (platform) {
         case 'ios':
-            return 'iOS (Google MLKit)';
+            return 'iOS (MLKit + MediaPipe LLM)';
         case 'android':  
-            return 'Android (Google MLKit)';
+            return 'Android (MLKit + TBD LLM)';
         case 'web':
             return 'Web (Stub)';
         default:

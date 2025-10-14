@@ -26,12 +26,27 @@
       <section style="margin-bottom: 2rem;">
         <h2>Image Classification</h2>
         <p>
-          <strong>Note:</strong> For iOS, make sure you have added a CoreML model (e.g., MobileNetV2.mlmodelc) to your app bundle.
-          For Android and Web, this will return stub data.
+          <strong>Note:</strong> Uses Google MLKit for both iOS and Android platforms.
+          Web returns stub data.
         </p>
         <button onclick="testClassifyImage()">Test Image Classification</button>
         <div id="classificationResults" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 100px;">
           Classification results will appear here...
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2>LLM Text Generation</h2>
+        <p>
+          <strong>Note:</strong> For iOS, requires a MediaPipe LLM model (e.g., gemma-2-2b-it-gpu-int8.bin) in your app bundle.
+          Android implementation coming soon. Web returns stub data.
+        </p>
+        <label for="promptInput">Enter your prompt:</label>
+        <textarea id="promptInput" name="promptInput" rows="3" style="width: 100%; margin: 8px 0;" 
+                  placeholder="Explain artificial intelligence in simple terms">Explain artificial intelligence in simple terms</textarea>
+        <button onclick="testGenerateText()">Generate Text</button>
+        <div id="textResults" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 100px;">
+          Generated text will appear here...
         </div>
       </section>
     </main>
