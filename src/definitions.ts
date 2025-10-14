@@ -36,6 +36,23 @@ export interface LLMInferenceOptions {
    * Temperature for controlling randomness (0.0 to 1.0, default: 0.7)
    */
   temperature?: number;
+  /**
+   * Model configuration options
+   */
+  modelConfig?: {
+    /**
+     * Whether to download the model at runtime instead of using bundled model
+     */
+    downloadAtRuntime?: boolean;
+    /**
+     * URL to download the model from (required if downloadAtRuntime is true)
+     */
+    downloadUrl?: string;
+    /**
+     * Local model filename to use (defaults based on URL or bundled model)
+     */
+    modelFileName?: string;
+  };
 }
 
 export interface LLMInferenceResult {

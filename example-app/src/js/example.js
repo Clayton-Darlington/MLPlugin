@@ -72,11 +72,26 @@ window.testGenerateText = async () => {
             resultsDiv.innerHTML = '<h3>Generating text...</h3><div>Please wait...</div>';
         }
         
-        const result = await MLPlugin.generateText({ 
+        // Check if user wants to download model at runtime
+        const downloadCheckbox = document.getElementById("downloadModelCheckbox");
+        const useDownload = downloadCheckbox ? downloadCheckbox.checked : false;
+        
+        const options = { 
             prompt: prompt,
             maxTokens: 150,
             temperature: 0.7
-        });
+        };
+        
+        // Add download configuration if enabled
+        if (useDownload) {
+            options.modelConfig = {
+                downloadAtRuntime: true,
+                downloadUrl: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm',
+                modelFileName: 'gemma-3n-e2b.litertlm'
+            };
+        }
+        
+        const result = await MLPlugin.generateText(options);
         
         console.log('Text generation results:', result);
         

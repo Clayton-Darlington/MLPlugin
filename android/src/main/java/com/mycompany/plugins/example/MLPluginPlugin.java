@@ -55,9 +55,21 @@ public class MLPluginPlugin extends Plugin {
 
         int maxTokens = call.getInt("maxTokens", 100);
         float temperature = call.getFloat("temperature", 0.7f);
+        
+        // Parse model configuration
+        JSObject modelConfig = call.getObject("modelConfig");
+        boolean downloadAtRuntime = false;
+        String downloadUrl = null;
+        String modelFileName = null;
+        
+        if (modelConfig != null) {
+            downloadAtRuntime = modelConfig.getBool("downloadAtRuntime", false);
+            downloadUrl = modelConfig.getString("downloadUrl");
+            modelFileName = modelConfig.getString("modelFileName");
+        }
 
         // Handle async LLM processing
-        implementation.generateText(prompt, maxTokens, temperature)
+        implementation.generateText(prompt, maxTokens, temperature, downloadAtRuntime, downloadUrl, modelFileName)
             .thenAccept(result -> {
                 if (result.has("error")) {
                     call.reject(result.getString("error"));

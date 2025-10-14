@@ -15,6 +15,12 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference;
 import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MLPlugin {
     
@@ -126,7 +132,63 @@ public class MLPlugin {
         }
     }
     
-    public CompletableFuture<JSObject> generateText(String prompt, int maxTokens, float temperature) {
+    private String downloadModel(String urlString, String fileName) throws IOException {
+        URL url = new URL(urlString);
+        
+        // Determine file name
+        String finalFileName = fileName != null ? fileName : 
+            url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
+        if (finalFileName.isEmpty()) {
+            finalFileName = "downloaded_model.litertlm";
+        }
+        
+        // Create download directory
+        File downloadDir = new File("/data/local/tmp/llm/");
+        if (!downloadDir.exists()) {
+            downloadDir.mkdirs();
+        }
+        
+        File localFile = new File(downloadDir, finalFileName);
+        
+        // Check if file already exists
+        if (localFile.exists()) {
+            Logger.info("Model already exists at: " + localFile.getAbsolutePath());
+            return localFile.getAbsolutePath();
+        }
+        
+        Logger.info("Downloading model to: " + localFile.getAbsolutePath());
+        
+        // Download the file
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(30000); // 30 seconds
+        connection.setReadTimeout(300000);   // 5 minutes
+        
+        int responseCode = connection.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new IOException("Download failed with response code: " + responseCode);
+        }
+        
+        // Stream the download
+        try (InputStream inputStream = connection.getInputStream();
+             FileOutputStream outputStream = new FileOutputStream(localFile)) {
+            
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            long totalBytes = 0;
+            
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+                totalBytes += bytesRead;
+            }
+            
+            Logger.info("Model downloaded successfully: " + totalBytes + " bytes to " + localFile.getAbsolutePath());
+        }
+        
+        return localFile.getAbsolutePath();
+    }
+    
+    public CompletableFuture<JSObject> generateText(String prompt, int maxTokens, float temperature, boolean downloadAtRuntime, String downloadUrl, String modelFileName) {
         Logger.info("generateText called on Android with prompt: " + prompt);
         
         return CompletableFuture.supplyAsync(() -> {
@@ -135,25 +197,42 @@ public class MLPlugin {
             try {
                 // Initialize LLM Inference if not already done
                 if (llmInference == null) {
-                    // Note: Download a model file to device storage, for example:
-                    // - gemma-3n-e2b.litertlm (recommended, latest format)  
-                    // - gemma-3-1b-it.task (legacy format)
-                    // Use adb push during development: adb push model.litertlm /data/local/tmp/llm/
+                    String modelPath;
+                    
+                    if (downloadAtRuntime && downloadUrl != null) {
+                        // Download model at runtime
+                        Logger.info("Downloading model from: " + downloadUrl);
+                        try {
+                            modelPath = downloadModel(downloadUrl, modelFileName);
+                        } catch (Exception e) {
+                            Logger.error("Failed to download model", e.getMessage(), e);
+                            result.put("error", "Failed to download model from " + downloadUrl + ": " + e.getMessage());
+                            return result;
+                        }
+                    } else {
+                        // Use local model path
+                        String fileName = modelFileName != null ? modelFileName : "gemma-3n-e2b.litertlm";
+                        modelPath = "/data/local/tmp/llm/" + fileName;
+                        Logger.info("Using local model: " + modelPath);
+                    }
+                    
                     LlmInferenceOptions options = LlmInferenceOptions.builder()
+                            .setModelPath(modelPath)
                             .setMaxTokens(maxTokens)
                             .setTemperature(temperature)
                             .setTopK(40)
                             .setRandomSeed(101)
-                            // .setModelPath("/data/local/tmp/llm/gemma-3n-e2b.litertlm") // Path to your downloaded model
                             .build();
                             
-                    // This will fail without a real model, so we'll catch and provide a meaningful error
                     try {
                         llmInference = LlmInference.createFromOptions(null, options);
-                        Logger.info("LLM Inference initialized successfully");
+                        Logger.info("LLM Inference initialized successfully with model: " + modelPath);
                     } catch (Exception e) {
                         Logger.error("Failed to initialize LLM Inference", e.getMessage(), e);
-                        result.put("error", "LLM model not found. Please download a compatible model file (e.g., gemma-3n-e2b.litertlm or gemma-3-1b-it.task) and set the correct path.");
+                        String errorMsg = downloadAtRuntime ? 
+                            "Failed to initialize LLM with downloaded model" :
+                            "LLM model not found at " + modelPath + ". Please download a compatible model file or use downloadAtRuntime option.";
+                        result.put("error", errorMsg);
                         return result;
                     }
                 }

@@ -50,7 +50,20 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
         let maxTokens = call.getInt("maxTokens") ?? 100
         let temperature = call.getFloat("temperature") ?? 0.7
         
-        implementation.generateText(prompt: prompt, maxTokens: maxTokens, temperature: temperature) { result in
+        // Parse model configuration
+        let modelConfig = call.getObject("modelConfig")
+        let downloadAtRuntime = modelConfig?["downloadAtRuntime"] as? Bool ?? false
+        let downloadUrl = modelConfig?["downloadUrl"] as? String
+        let modelFileName = modelConfig?["modelFileName"] as? String
+        
+        implementation.generateText(
+            prompt: prompt, 
+            maxTokens: maxTokens, 
+            temperature: temperature,
+            downloadAtRuntime: downloadAtRuntime,
+            downloadUrl: downloadUrl,
+            modelFileName: modelFileName
+        ) { result in
             switch result {
             case .success(let response):
                 call.resolve(response)

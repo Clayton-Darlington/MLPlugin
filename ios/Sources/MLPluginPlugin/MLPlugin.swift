@@ -69,30 +69,46 @@ import MediaPipeTasksGenai
         }
     }
     
-    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, downloadAtRuntime: Bool = false, downloadUrl: String? = nil, modelFileName: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) {
         print("generateText called on iOS with prompt: \(prompt)")
         
         // Initialize LLM if not already done
         if llmInference == nil {
             do {
-                // Note: Add a model file to your iOS bundle, for example:
-                // - gemma-3n-e2b.litertlm (recommended, latest format)
-                // - gemma-2-2b-it-gpu-int8.bin (legacy format)
-                // let modelPath = Bundle.main.path(forResource: "gemma-3n-e2b", ofType: "litertlm")
+                var modelPath: String?
+                
+                if downloadAtRuntime, let url = downloadUrl {
+                    // Download model at runtime
+                    print("Downloading model from: \(url)")
+                    modelPath = try await downloadModel(from: url, fileName: modelFileName)
+                } else {
+                    // Use bundled model
+                    let fileName = modelFileName ?? "gemma-3n-e2b"
+                    let fileExtension = (fileName.contains(".") ? "" : "litertlm")
+                    modelPath = Bundle.main.path(forResource: fileName, ofType: fileExtension)
+                    print("Using bundled model: \(fileName)")
+                }
+                
+                guard let validModelPath = modelPath else {
+                    let errorMsg = downloadAtRuntime ? 
+                        "Failed to download model from \(downloadUrl ?? "unknown URL")" :
+                        "Bundled model not found. Please add a compatible model file to your iOS app bundle."
+                    completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: errorMsg])))
+                    return
+                }
                 
                 let options = LlmInferenceOptions()
-                // options.baseOptions.modelPath = modelPath  // Uncomment when you add a model file
+                options.baseOptions.modelPath = validModelPath
                 options.maxTokens = maxTokens
                 options.topk = 40
                 options.temperature = temperature
                 options.randomSeed = 101
                 
-                // This will fail without a real model, so we'll catch and provide a meaningful error
                 llmInference = try LlmInference(options: options)
-                print("LLM Inference initialized successfully")
+                print("LLM Inference initialized successfully with model at: \(validModelPath)")
             } catch {
                 print("Failed to initialize LLM Inference: \(error)")
-                completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "LLM model not found. Please add a compatible model file (e.g., gemma-3n-e2b.litertlm or gemma-2-2b-it-gpu-int8.bin) to your iOS app bundle and set the modelPath."])))
+                completion(.failure(error))
                 return
             }
         }
@@ -145,5 +161,41 @@ import MediaPipeTasksGenai
         
         print("Successfully decoded base64 image: \(image.size.width)x\(image.size.height)")
         return image
+    }
+    
+    private func downloadModel(from urlString: String, fileName: String?) async throws -> String {
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "MLPlugin", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid download URL: \(urlString)"])
+        }
+        
+        // Determine file name
+        let finalFileName = fileName ?? url.lastPathComponent.isEmpty ? "downloaded_model.litertlm" : url.lastPathComponent
+        
+        // Get documents directory
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let localFileURL = documentsPath.appendingPathComponent(finalFileName)
+        
+        // Check if file already exists
+        if FileManager.default.fileExists(atPath: localFileURL.path) {
+            print("Model already exists at: \(localFileURL.path)")
+            return localFileURL.path
+        }
+        
+        print("Downloading model to: \(localFileURL.path)")
+        
+        // Download the file
+        let (tempURL, response) = try await URLSession.shared.download(from: url)
+        
+        // Verify response
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NSError(domain: "MLPlugin", code: 6, userInfo: [NSLocalizedDescriptionKey: "Download failed with response: \(response)"])
+        }
+        
+        // Move temp file to documents directory
+        try FileManager.default.moveItem(at: tempURL, to: localFileURL)
+        
+        print("Model downloaded successfully to: \(localFileURL.path)")
+        return localFileURL.path
     }
 }

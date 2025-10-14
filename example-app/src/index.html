@@ -44,6 +44,14 @@
         <label for="promptInput">Enter your prompt:</label>
         <textarea id="promptInput" name="promptInput" rows="3" style="width: 100%; margin: 8px 0;" 
                   placeholder="Explain artificial intelligence in simple terms">Explain artificial intelligence in simple terms</textarea>
+        
+        <div style="margin: 8px 0;">
+          <label>
+            <input type="checkbox" id="downloadModelCheckbox" />
+            Download model at runtime (instead of using bundled model)
+          </label>
+        </div>
+        
         <button onclick="testGenerateText()">Generate Text</button>
         <div id="textResults" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 100px;">
           Generated text will appear here...

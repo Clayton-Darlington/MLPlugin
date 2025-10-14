@@ -78,11 +78,23 @@ const result = await MLPlugin.classifyImage({
 console.log(result.predictions);
 // Output: [{ label: 'cat', confidence: 0.95 }, ...]
 
-// Generate text with LLM
+// Generate text with LLM (using bundled model)
 const textResult = await MLPlugin.generateText({
   prompt: 'Explain quantum computing in simple terms',
   maxTokens: 150,
   temperature: 0.7
+});
+
+// Generate text with LLM (download model at runtime)
+const textResultWithDownload = await MLPlugin.generateText({
+  prompt: 'Explain quantum computing in simple terms',
+  maxTokens: 150,
+  temperature: 0.7,
+  modelConfig: {
+    downloadAtRuntime: true,
+    downloadUrl: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm',
+    modelFileName: 'gemma-3n-e2b.litertlm'
+  }
 });
 
 console.log(textResult.response);
@@ -212,13 +224,42 @@ Generate text using on-device LLM inference
 | **`prompt`**      | <code>string</code> | The text prompt to send to the LLM                      |
 | **`maxTokens`**   | <code>number</code> | Maximum number of tokens to generate (default: 100)     |
 | **`temperature`** | <code>number</code> | Temperature for controlling randomness (0.0 to 1.0, default: 0.7) |
+| **`topK`**        | <code>number</code> | Limit vocabulary selection to top K tokens (optional)   |
+| **`topP`**        | <code>number</code> | Nucleus sampling threshold (0.0 to 1.0, optional)      |
+| **`randomSeed`**  | <code>number</code> | Random seed for reproducible generation (optional)      |
+| **`modelConfig`** | <code>ModelConfig</code> | Configuration for model loading/downloading (optional) |
+
+#### ModelConfig
+
+| Prop                   | Type                 | Description                                              |
+| ---------------------- | -------------------- | -------------------------------------------------------- |
+| **`downloadAtRuntime`** | <code>boolean</code> | Set to true to download model from URL instead of using bundled model |
+| **`downloadUrl`**      | <code>string</code>  | Direct download URL for the .litertlm model file        |
+| **`modelFileName`**    | <code>string</code>  | Local filename to save the downloaded model             |
 
 </docgen-api>
 
 ## Platform Support
 
-| Platform | Image Classification | LLM Text Generation | Notes |
-|----------|---------------------|-------------------|-------|
-| iOS      | ✅ Google MLKit      | ✅ MediaPipe LLM   | Requires model files in app bundle |
-| Android  | ✅ Google MLKit      | ✅ MediaPipe LLM   | Requires model files on device storage |
-| Web      | 🚧 Stub             | 🚧 Stub           | Returns mock responses |
+| Platform | Image Classification | LLM Text Generation | Model Loading | Notes |
+|----------|---------------------|-------------------|---------------|-------|
+| iOS      | ✅ Google MLKit      | ✅ MediaPipe LLM   | Bundle + Download | Supports both bundled models and runtime downloads |
+| Android  | ✅ Google MLKit      | ✅ MediaPipe LLM   | Bundle + Download | Supports both bundled models and runtime downloads |
+| Web      | 🚧 Stub             | 🚧 Stub           | N/A           | Returns mock responses |
+
+## Deployment Considerations
+
+### Bundled Models (Default)
+- **Pros**: No network required, faster first use, guaranteed availability
+- **Cons**: Increases app size, models can't be updated without app updates
+- **Use case**: Apps that need to work offline or have fast startup requirements
+
+### Runtime Downloads
+- **Pros**: Smaller app size, models can be updated independently, supports A/B testing
+- **Cons**: Requires network on first use, potential download failures
+- **Use case**: Apps with good connectivity, need for model updates, or size constraints
+
+### Model Size Considerations
+- **Gemma-3n E2B (~2B params)**: ~1.5GB - Good balance of quality and size
+- **Gemma-3n E4B (~4B params)**: ~3GB - Higher quality, larger download
+- **Gemma-3 1B (~1B params)**: ~800MB - Fastest, most compact option
