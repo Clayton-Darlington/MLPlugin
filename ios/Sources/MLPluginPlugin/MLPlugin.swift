@@ -1,8 +1,11 @@
 import Foundation
 import Vision
+import CoreML
 import UIKit
 
 @objc public class MLPlugin: NSObject {
+    
+    private var customModel: VNCoreMLModel?
     
     @objc public func echo(_ value: String) -> String {
         print(value)
@@ -11,7 +14,23 @@ import UIKit
     
     override init() {
         super.init()
-        print("MLPlugin initialized - using default Vision framework classification")
+        setupModel()
+    }
+    
+    private func setupModel() {
+        // Try to load FastViTMA36F16Headless model
+        guard let modelURL = Bundle.main.url(forResource: "FastViTMA36F16Headless", withExtension: "mlmodelc") else {
+            print("FastViTMA36F16Headless.mlmodelc not found - will use default Vision classification")
+            return
+        }
+        
+        do {
+            let model = try MLModel(contentsOf: modelURL)
+            self.customModel = try VNCoreMLModel(for: model)
+            print("Successfully loaded FastViTMA36F16Headless custom model")
+        } catch {
+            print("Failed to load FastViTMA36F16Headless model: \(error) - will use default Vision classification")
+        }
     }
     
 
@@ -29,17 +48,17 @@ import UIKit
             return
         }
         
-        // Use Vision's built-in image classification
-        if #available(iOS 13.0, *) {
-            // Create a VNClassifyImageRequest for built-in classification
-            let request = VNClassifyImageRequest { request, error in
+        // Use custom model if available, otherwise fall back to Vision's built-in classification
+        if let customModel = self.customModel {
+            // Use custom FastViTMA36F16Headless model
+            let request = VNCoreMLRequest(model: customModel) { request, error in
                 if let error = error {
                     completion(.failure(error))
                     return
                 }
                 
                 guard let results = request.results as? [VNClassificationObservation] else {
-                    completion(.failure(NSError(domain: "MLPlugin", code: 3, userInfo: [NSLocalizedDescriptionKey: "No classification results"])))
+                    completion(.failure(NSError(domain: "MLPlugin", code: 3, userInfo: [NSLocalizedDescriptionKey: "No classification results from custom model"])))
                     return
                 }
                 
@@ -51,9 +70,49 @@ import UIKit
                     ] as [String: Any]
                 }
                 
+                print("Classification completed using FastViTMA36F16Headless custom model")
                 completion(.success(Array(predictions)))
             }
-        
+            
+            // Configure the custom model request
+            request.imageCropAndScaleOption = .centerCrop
+            
+            // Perform the request
+            let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
+            
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try handler.perform([request])
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+            
+        } else if #available(iOS 13.0, *) {
+            // Fall back to Vision's built-in image classification
+            let request = VNClassifyImageRequest { request, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let results = request.results as? [VNClassificationObservation] else {
+                    completion(.failure(NSError(domain: "MLPlugin", code: 3, userInfo: [NSLocalizedDescriptionKey: "No classification results from default Vision"])))
+                    return
+                }
+                
+                // Convert results to the expected format
+                let predictions = results.prefix(5).map { result in
+                    return [
+                        "label": result.identifier,
+                        "confidence": Double(result.confidence)
+                    ] as [String: Any]
+                }
+                
+                print("Classification completed using default Vision framework")
+                completion(.success(Array(predictions)))
+            }
+            
             // VNClassifyImageRequest doesn't have imageCropAndScaleOption
             // It handles image scaling automatically
             
@@ -69,7 +128,7 @@ import UIKit
             }
         } else {
             // Fallback for iOS < 13.0
-            completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "VNClassifyImageRequest requires iOS 13.0 or later"])))
+            completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "Classification requires iOS 13.0 or later"])))
         }
     }
     
