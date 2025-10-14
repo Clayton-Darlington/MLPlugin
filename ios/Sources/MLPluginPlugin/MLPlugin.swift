@@ -9,6 +9,7 @@ import MediaPipeTasksGenAIC
     
     private var imageLabeler: ImageLabeler
     private var llmInference: LlmInference?
+    private var currentLLMModelName: String?
     
     @objc public func echo(_ value: String) -> String {
         print(value)
@@ -61,7 +62,8 @@ import MediaPipeTasksGenAIC
             let predictions: [[String: Any]] = labels.prefix(5).map { label in
                 return [
                     "label": label.text,
-                    "confidence": Double(label.confidence)
+                    "confidence": Double(label.confidence),
+                    "modelName": "Google MLKit Image Labeler"
                 ]
             }
             
@@ -77,16 +79,19 @@ import MediaPipeTasksGenAIC
         if llmInference == nil {
             do {
                 var modelPath: String?
+                var currentModelName: String
                 
                 if downloadAtRuntime, let url = downloadUrl {
                     // Download model at runtime
                     print("Downloading model from: \(url)")
                     modelPath = try await downloadModel(from: url, fileName: modelFileName)
+                    currentModelName = modelFileName ?? URL(string: url)?.lastPathComponent ?? "Downloaded Model"
                 } else {
                     // Use bundled model
                     let fileName = modelFileName ?? "gemma-3n-e2b"
                     let fileExtension = (fileName.contains(".") ? "" : "litertlm")
                     modelPath = Bundle.main.path(forResource: fileName, ofType: fileExtension)
+                    currentModelName = fileName
                     print("Using bundled model: \(fileName)")
                 }
                 
@@ -100,11 +105,9 @@ import MediaPipeTasksGenAIC
                 
                 let options = LlmInference.Options(modelPath: validModelPath)
                 options.maxTokens = maxTokens
-                options.topK = 40
-                options.temperature = temperature
-                options.randomSeed = 101
                 
                 llmInference = try LlmInference(options: options)
+                currentLLMModelName = currentModelName
                 print("LLM Inference initialized successfully with model at: \(validModelPath)")
             } catch {
                 print("Failed to initialize LLM Inference: \(error)")
@@ -119,7 +122,8 @@ import MediaPipeTasksGenAIC
             
             let response: [String: Any] = [
                 "response": result,
-                "tokensUsed": result.count / 4 // Rough estimate of token count
+                "tokensUsed": result.count / 4, // Rough estimate of token count
+                "modelName": currentLLMModelName ?? "MediaPipe LLM"
             ]
             
             print("LLM generation completed successfully")
@@ -169,7 +173,7 @@ import MediaPipeTasksGenAIC
         }
         
         // Determine file name
-        let finalFileName = fileName ?? url.lastPathComponent.isEmpty ? "downloaded_model.litertlm" : url.lastPathComponent
+        let finalFileName = fileName ?? (url.lastPathComponent.isEmpty ? "downloaded_model.litertlm" : url.lastPathComponent)
         
         // Get documents directory
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -183,8 +187,8 @@ import MediaPipeTasksGenAIC
         
         print("Downloading model to: \(localFileURL.path)")
         
-        // Download the file
-        let (tempURL, response) = try await URLSession.shared.download(from: url)
+        // Download the file using data task (compatible with iOS 13+)
+        let (data, response) = try await URLSession.shared.data(from: url)
         
         // Verify response
         guard let httpResponse = response as? HTTPURLResponse,
@@ -192,8 +196,8 @@ import MediaPipeTasksGenAIC
             throw NSError(domain: "MLPlugin", code: 6, userInfo: [NSLocalizedDescriptionKey: "Download failed with response: \(response)"])
         }
         
-        // Move temp file to documents directory
-        try FileManager.default.moveItem(at: tempURL, to: localFileURL)
+        // Write data to local file
+        try data.write(to: localFileURL)
         
         print("Model downloaded successfully to: \(localFileURL.path)")
         return localFileURL.path
