@@ -54,8 +54,8 @@ import UIKit
                 completion(.success(Array(predictions)))
             }
         
-            // Configure the request
-            request.imageCropAndScaleOption = .centerCrop
+            // VNClassifyImageRequest doesn't have imageCropAndScaleOption
+            // It handles image scaling automatically
             
             // Perform the request
             let handler = VNImageRequestHandler(ciImage: ciImage, options: [:])
