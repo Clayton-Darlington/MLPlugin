@@ -10,6 +10,7 @@ import MediaPipeTasksGenAIC
     private var imageLabeler: ImageLabeler
     private var llmInference: LlmInference?
     private var currentLLMModelName: String?
+    private var modelInitializationTask: Task<Void, Never>?
     
     @objc public func echo(_ value: String) -> String {
         print(value)
@@ -22,12 +23,26 @@ import MediaPipeTasksGenAIC
         options.confidenceThreshold = 0.7
         imageLabeler = ImageLabeler.imageLabeler(options: options)
         
-        // Initialize LLM Inference (will be configured when first used)
+        // Initialize LLM Inference as nil initially
         llmInference = nil
         
         super.init()
         
         print("MLPlugin initialized - using MLKit Image Labeling")
+        
+        // Start model initialization in background
+        initializeDefaultModel()
+    }
+    
+    private func initializeDefaultModel() {
+        modelInitializationTask = Task {
+            await initializeLLMModel(
+                downloadAtRuntime: true,
+                downloadUrl: "https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm",
+                modelFileName: "gemma-3n-2b.litertlm",
+                maxTokens: 1000
+            )
+        }
     }
     
 
@@ -75,50 +90,31 @@ import MediaPipeTasksGenAIC
     public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, downloadAtRuntime: Bool = false, downloadUrl: String? = nil, modelFileName: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) async {
         print("generateText called on iOS with prompt: \(prompt)")
         
-        // Initialize LLM if not already done
+        // Wait for default model initialization if still in progress
         if llmInference == nil {
-            do {
-                var modelPath: String?
-                var currentModelName: String
-                
-                if downloadAtRuntime, let url = downloadUrl {
-                    // Download model at runtime
-                    print("Downloading model from: \(url)")
-                    modelPath = try await downloadModel(from: url, fileName: modelFileName)
-                    currentModelName = modelFileName ?? URL(string: url)?.lastPathComponent ?? "Downloaded Model"
-                } else {
-                    // Use bundled model
-                    let fileName = modelFileName ?? "gemma-3n-e2b"
-                    let fileExtension = (fileName.contains(".") ? "" : "litertlm")
-                    modelPath = Bundle.main.path(forResource: fileName, ofType: fileExtension)
-                    currentModelName = fileName
-                    print("Using bundled model: \(fileName)")
-                }
-                
-                guard let validModelPath = modelPath else {
-                    let errorMsg = downloadAtRuntime ? 
-                        "Failed to download model from \(downloadUrl ?? "unknown URL")" :
-                        "Bundled model not found. Please add a compatible model file to your iOS app bundle."
-                    completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: errorMsg])))
-                    return
-                }
-                
-                let options = LlmInference.Options(modelPath: validModelPath)
-                options.maxTokens = maxTokens
-                
-                llmInference = try LlmInference(options: options)
-                currentLLMModelName = currentModelName
-                print("LLM Inference initialized successfully with model at: \(validModelPath)")
-            } catch {
-                print("Failed to initialize LLM Inference: \(error)")
-                completion(.failure(error))
-                return
+            print("LLM not ready, waiting for initialization...")
+            await modelInitializationTask?.value
+            
+            // If still nil after default initialization, try to initialize with custom parameters
+            if llmInference == nil {
+                await initializeLLMModel(
+                    downloadAtRuntime: downloadAtRuntime,
+                    downloadUrl: downloadUrl,
+                    modelFileName: modelFileName,
+                    maxTokens: maxTokens
+                )
             }
+        }
+        
+        // Check if initialization was successful
+        guard let llmInference = llmInference else {
+            completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "Failed to initialize LLM model"])))
+            return
         }
         
         // Generate response using MediaPipe LLM Inference
         do {
-            let result = try llmInference!.generateResponse(inputText: prompt)
+            let result = try llmInference.generateResponse(inputText: prompt)
             
             let response: [String: Any] = [
                 "response": result,
@@ -131,6 +127,44 @@ import MediaPipeTasksGenAIC
         } catch {
             print("LLM generation failed: \(error.localizedDescription)")
             completion(.failure(error))
+        }
+    }
+    
+    private func initializeLLMModel(downloadAtRuntime: Bool, downloadUrl: String?, modelFileName: String?, maxTokens: Int) async {
+        do {
+            var modelPath: String?
+            var currentModelName: String
+            
+            if downloadAtRuntime, let url = downloadUrl {
+                // Download model at runtime
+                print("Downloading model from: \(url)")
+                modelPath = try await downloadModel(from: url, fileName: modelFileName)
+                currentModelName = modelFileName ?? URL(string: url)?.lastPathComponent ?? "Downloaded Model"
+            } else {
+                // Use bundled model
+                let fileName = modelFileName ?? "gemma-3n-2b"
+                let fileExtension = (fileName.contains(".") ? "" : "litertlm")
+                modelPath = Bundle.main.path(forResource: fileName, ofType: fileExtension)
+                currentModelName = fileName
+                print("Using bundled model: \(fileName)")
+            }
+            
+            guard let validModelPath = modelPath else {
+                let errorMsg = downloadAtRuntime ? 
+                    "Failed to download model from \(downloadUrl ?? "unknown URL")" :
+                    "Bundled model not found. Please add a compatible model file to your iOS app bundle."
+                print("Model initialization failed: \(errorMsg)")
+                return
+            }
+            
+            let options = LlmInference.Options(modelPath: validModelPath)
+            options.maxTokens = maxTokens
+            
+            llmInference = try LlmInference(options: options)
+            currentLLMModelName = currentModelName
+            print("LLM Inference initialized successfully with model: \(currentModelName)")
+        } catch {
+            print("Failed to initialize LLM Inference: \(error)")
         }
     }
     
