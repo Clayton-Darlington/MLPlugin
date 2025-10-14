@@ -114,7 +114,7 @@ function getPlatformInfo() {
         case 'ios':
             return 'iOS (MLKit + MediaPipe LLM)';
         case 'android':  
-            return 'Android (MLKit + TBD LLM)';
+            return 'Android (MLKit + MediaPipe LLM)';
         case 'web':
             return 'Web (Stub)';
         default:

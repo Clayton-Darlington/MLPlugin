@@ -43,4 +43,31 @@ public class MLPluginPlugin extends Plugin {
                 return null;
             });
     }
+
+    @PluginMethod
+    public void generateText(PluginCall call) {
+        String prompt = call.getString("prompt");
+        
+        if (prompt == null) {
+            call.reject("prompt is required");
+            return;
+        }
+
+        int maxTokens = call.getInt("maxTokens", 100);
+        float temperature = call.getFloat("temperature", 0.7f);
+
+        // Handle async LLM processing
+        implementation.generateText(prompt, maxTokens, temperature)
+            .thenAccept(result -> {
+                if (result.has("error")) {
+                    call.reject(result.getString("error"));
+                } else {
+                    call.resolve(result);
+                }
+            })
+            .exceptionally(throwable -> {
+                call.reject("Unexpected error: " + throwable.getMessage());
+                return null;
+            });
+    }
 }

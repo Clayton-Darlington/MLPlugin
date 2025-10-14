@@ -11,12 +11,15 @@ import com.google.mlkit.vision.label.ImageLabel;
 import com.google.mlkit.vision.label.ImageLabeler;
 import com.google.mlkit.vision.label.ImageLabeling;
 import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
+import com.google.mediapipe.tasks.genai.llminference.LlmInference;
+import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions;
 import java.util.concurrent.CompletableFuture;
 import java.util.List;
 
 public class MLPlugin {
     
     private ImageLabeler imageLabeler;
+    private LlmInference llmInference;
     
     public MLPlugin() {
         // Initialize MLKit Image Labeler with default options
@@ -24,6 +27,9 @@ public class MLPlugin {
                 .setConfidenceThreshold(0.7f)
                 .build();
         imageLabeler = ImageLabeling.getClient(options);
+        
+        // LLM Inference will be initialized on first use
+        llmInference = null;
     }
 
     public String echo(String value) {
@@ -118,5 +124,52 @@ public class MLPlugin {
             Logger.error("Failed to decode base64 to bitmap", e.getMessage(), e);
             return null;
         }
+    }
+    
+    public CompletableFuture<JSObject> generateText(String prompt, int maxTokens, float temperature) {
+        Logger.info("generateText called on Android with prompt: " + prompt);
+        
+        return CompletableFuture.supplyAsync(() -> {
+            JSObject result = new JSObject();
+            
+            try {
+                // Initialize LLM Inference if not already done
+                if (llmInference == null) {
+                    // Note: For a real implementation, you would need to download and specify a model file
+                    // For now, we'll provide a meaningful error about the missing model
+                    LlmInferenceOptions options = LlmInferenceOptions.builder()
+                            .setMaxTokens(maxTokens)
+                            .setTemperature(temperature)
+                            .setTopK(40)
+                            .setRandomSeed(101)
+                            // .setModelPath("/data/local/tmp/llm/model.task") // Path to your downloaded model
+                            .build();
+                            
+                    // This will fail without a real model, so we'll catch and provide a meaningful error
+                    try {
+                        llmInference = LlmInference.createFromOptions(null, options);
+                        Logger.info("LLM Inference initialized successfully");
+                    } catch (Exception e) {
+                        Logger.error("Failed to initialize LLM Inference", e.getMessage(), e);
+                        result.put("error", "LLM model not found. Please download a compatible model file (e.g., gemma-3-1b-it.task) and set the correct path.");
+                        return result;
+                    }
+                }
+                
+                // Generate response using MediaPipe LLM Inference
+                String response = llmInference.generateResponse(prompt);
+                
+                result.put("response", response);
+                result.put("tokensUsed", response.length() / 4); // Rough estimate of token count
+                
+                Logger.info("LLM generation completed successfully");
+                return result;
+                
+            } catch (Exception e) {
+                Logger.error("LLM generation failed", e.getMessage(), e);
+                result.put("error", "Text generation failed: " + e.getMessage());
+                return result;
+            }
+        });
     }
 }

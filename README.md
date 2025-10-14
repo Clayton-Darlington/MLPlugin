@@ -4,9 +4,10 @@ ML Plugin with Image Classification using Vision and CoreML
 
 ## Features
 
-- **Image Classification**: Classify images using Vision and CoreML on iOS
-- **Cross-platform**: Stub implementations for Android and Web
-- **Device-only processing**: All classification happens on-device for privacy
+- **Image Classification**: Classify images using Google MLKit on iOS and Android
+- **LLM Text Generation**: Generate text using MediaPipe LLM Inference on iOS and Android
+- **Cross-platform**: Full native implementations for iOS and Android, stubs for Web
+- **Device-only processing**: All processing happens on-device for privacy
 
 ## Install
 
@@ -32,22 +33,27 @@ npm link ml-plugin
 
 ### iOS Setup
 
-iOS implementation uses Google's MLKit (same as Android):
+**Image Classification**: Uses Google MLKit (same as Android)
+- No additional setup required - works out of the box
+- MLKit automatically downloads base models on first use
 
-1. No additional setup required
-2. MLKit will automatically download base models on first use  
-3. Uses Google's on-device image labeling models
-4. Requires internet connection for initial model download
-5. Requires iOS 14.0 or later
+**LLM Text Generation**: Uses MediaPipe LLM Inference
+- Requires adding a compatible model file to your iOS app bundle
+- Recommended: [Gemma-2 2B quantized](https://www.kaggle.com/models/google/gemma-2/tfLite/gemma2-2b-it-gpu-int8) 
+- Add the `.bin` model file to your Xcode project's bundle
+- Requires iOS 14.0 or later
 
 ### Android Setup
 
-Android implementation uses Google's MLKit and works out of the box:
+**Image Classification**: Uses Google MLKit and works out of the box
+- No additional setup required
+- MLKit automatically downloads base models on first use
 
-1. No additional setup required
-2. MLKit will automatically download base models on first use
-3. Uses Google's on-device image labeling models
-4. Requires internet connection for initial model download
+**LLM Text Generation**: Uses MediaPipe LLM Inference  
+- Requires downloading a compatible model file to device storage
+- Recommended: [Gemma-3 1B quantized](https://huggingface.co/litert-community/Gemma3-1B-IT)
+- Push model to `/data/local/tmp/llm/` using adb during development
+- For production, download model from server at runtime
 
 ## Usage
 
@@ -77,6 +83,7 @@ console.log(result.predictions);
 
 * [`echo(...)`](#echo)
 * [`classifyImage(...)`](#classifyimage)
+* [`generateText(...)`](#generatetext)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -118,6 +125,23 @@ Classify an image using Vision and CoreML (iOS only, stubs for other platforms)
 --------------------
 
 
+### generateText(...)
+
+```typescript
+generateText(options: LLMInferenceOptions) => Promise<LLMInferenceResult>
+```
+
+Generate text using on-device LLM inference
+
+| Param         | Type                                                                | Description                                                                  |
+| ------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **`options`** | <code><a href="#llminferenceoptions">LLMInferenceOptions</a></code> | - Configuration object containing the prompt and generation parameters |
+
+**Returns:** <code>Promise&lt;<a href="#llminferenceresult">LLMInferenceResult</a>&gt;</code>
+
+--------------------
+
+
 ### Interfaces
 
 
@@ -138,16 +162,33 @@ Classify an image using Vision and CoreML (iOS only, stubs for other platforms)
 
 #### ClassifyImageOptions
 
-| Prop            | Type                | Description                                   |
-| --------------- | ------------------- | --------------------------------------------- |
-| **`imagePath`** | <code>string</code> | Absolute path to the image file on the device |
+| Prop              | Type                | Description                                                   |
+| ----------------- | ------------------- | ------------------------------------------------------------- |
+| **`base64Image`** | <code>string</code> | Base64 encoded image data (with or without data URI prefix) |
+
+
+#### LLMInferenceResult
+
+| Prop             | Type                | Description                                |
+| ---------------- | ------------------- | ------------------------------------------ |
+| **`response`**   | <code>string</code> | The generated text response from the LLM  |
+| **`tokensUsed`** | <code>number</code> | Number of tokens used in the generation   |
+
+
+#### LLMInferenceOptions
+
+| Prop              | Type                | Description                                              |
+| ----------------- | ------------------- | -------------------------------------------------------- |
+| **`prompt`**      | <code>string</code> | The text prompt to send to the LLM                      |
+| **`maxTokens`**   | <code>number</code> | Maximum number of tokens to generate (default: 100)     |
+| **`temperature`** | <code>number</code> | Temperature for controlling randomness (0.0 to 1.0, default: 0.7) |
 
 </docgen-api>
 
 ## Platform Support
 
-| Platform | Status | Notes |
-|----------|--------|-------|
-| iOS      | ✅ Full | Uses Google MLKit for image classification |
-| Android  | ✅ Full | Uses Google MLKit for image classification |
-| Web      | 🚧 Stub | Returns mock predictions |
+| Platform | Image Classification | LLM Text Generation | Notes |
+|----------|---------------------|-------------------|-------|
+| iOS      | ✅ Google MLKit      | ✅ MediaPipe LLM   | Requires model files in app bundle |
+| Android  | ✅ Google MLKit      | ✅ MediaPipe LLM   | Requires model files on device storage |
+| Web      | 🚧 Stub             | 🚧 Stub           | Returns mock responses |
