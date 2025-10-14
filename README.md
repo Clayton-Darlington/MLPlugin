@@ -15,6 +15,19 @@ npm install ml-plugin
 npx cap sync
 ```
 
+## Local Dev
+For easy local deving pull the git repo and just npm link to whatever project you are working on.
+
+To link:
+
+```bash
+cd /dir/with/plugin
+npm link
+
+cd /dir/with/project
+npm link ml-plugin
+```
+
 ## Platform Setup
 
 ### iOS Setup
