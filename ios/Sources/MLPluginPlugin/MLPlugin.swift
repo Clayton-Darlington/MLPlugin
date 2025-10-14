@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import MLKitImageLabeling
 import MLKitVision
-import MediaPipeTasksGenAI
+import MediaPipeTasksGenai
 
 @objc public class MLPlugin: NSObject {
     
@@ -75,12 +75,15 @@ import MediaPipeTasksGenAI
         // Initialize LLM if not already done
         if llmInference == nil {
             do {
-                let options = LlmInferenceOptions()
                 // Note: Add a model file to your iOS bundle, for example:
                 // - gemma-3n-e2b.litertlm (recommended, latest format)
                 // - gemma-2-2b-it-gpu-int8.bin (legacy format)
-                // options.baseOptions.modelPath = Bundle.main.path(forResource: "gemma-3n-e2b", ofType: "litertlm")
+                // let modelPath = Bundle.main.path(forResource: "gemma-3n-e2b", ofType: "litertlm")
+                
+                let options = LlmInferenceOptions()
+                // options.baseOptions.modelPath = modelPath  // Uncomment when you add a model file
                 options.maxTokens = maxTokens
+                options.topk = 40
                 options.temperature = temperature
                 options.randomSeed = 101
                 
@@ -89,7 +92,7 @@ import MediaPipeTasksGenAI
                 print("LLM Inference initialized successfully")
             } catch {
                 print("Failed to initialize LLM Inference: \(error)")
-                completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "LLM model not found. Please add a compatible model file (e.g., gemma-3n-e2b.litertlm or gemma-2-2b-it-gpu-int8.bin) to your iOS app bundle."])))
+                completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "LLM model not found. Please add a compatible model file (e.g., gemma-3n-e2b.litertlm or gemma-2-2b-it-gpu-int8.bin) to your iOS app bundle and set the modelPath."])))
                 return
             }
         }
