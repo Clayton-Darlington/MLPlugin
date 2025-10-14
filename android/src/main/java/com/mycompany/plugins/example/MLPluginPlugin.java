@@ -29,7 +29,18 @@ public class MLPluginPlugin extends Plugin {
             return;
         }
 
-        JSObject result = implementation.classifyImage(base64Image);
-        call.resolve(result);
+        // Handle async MLKit processing
+        implementation.classifyImageAsync(base64Image)
+            .thenAccept(result -> {
+                if (result.has("error")) {
+                    call.reject(result.getString("error"));
+                } else {
+                    call.resolve(result);
+                }
+            })
+            .exceptionally(throwable -> {
+                call.reject("Unexpected error: " + throwable.getMessage());
+                return null;
+            });
     }
 }
