@@ -39,8 +39,9 @@ npm link ml-plugin
 
 **LLM Text Generation**: Uses MediaPipe LLM Inference
 - Requires adding a compatible model file to your iOS app bundle
-- Recommended: [Gemma-2 2B quantized](https://www.kaggle.com/models/google/gemma-2/tfLite/gemma2-2b-it-gpu-int8) 
-- Add the `.bin` model file to your Xcode project's bundle
+- **Recommended**: [Gemma-3n E2B (.litertlm)](https://huggingface.co/google/gemma-3n-E2B-it-litert-lm) - Latest optimized format
+- **Alternative**: [Gemma-2 2B (.bin)](https://www.kaggle.com/models/google/gemma-2/tfLite/gemma2-2b-it-gpu-int8) - Legacy format
+- Add the model file to your Xcode project's bundle
 - Requires iOS 14.0 or later
 
 ### Android Setup
@@ -51,7 +52,8 @@ npm link ml-plugin
 
 **LLM Text Generation**: Uses MediaPipe LLM Inference  
 - Requires downloading a compatible model file to device storage
-- Recommended: [Gemma-3 1B quantized](https://huggingface.co/litert-community/Gemma3-1B-IT)
+- **Recommended**: [Gemma-3n E2B (.litertlm)](https://huggingface.co/google/gemma-3n-E2B-it-litert-lm) - Latest optimized format
+- **Alternative**: [Gemma-3 1B (.task)](https://huggingface.co/litert-community/Gemma3-1B-IT) - Legacy format
 - Push model to `/data/local/tmp/llm/` using adb during development
 - For production, download model from server at runtime
 
@@ -75,7 +77,35 @@ const result = await MLPlugin.classifyImage({
 
 console.log(result.predictions);
 // Output: [{ label: 'cat', confidence: 0.95 }, ...]
+
+// Generate text with LLM
+const textResult = await MLPlugin.generateText({
+  prompt: 'Explain quantum computing in simple terms',
+  maxTokens: 150,
+  temperature: 0.7
+});
+
+console.log(textResult.response);
+// Output: Generated explanation text...
 ```
+
+## Model Formats
+
+### LLM Model Formats Support
+
+| Format | Extension | Platform Support | Status | Notes |
+|--------|-----------|------------------|--------|-------|
+| **LiteRT LM** | `.litertlm` | iOS, Android, Web | ✅ **Recommended** | Latest optimized format, ready-to-use |
+| **Task Bundle** | `.task` | iOS, Android, Web | ✅ Supported | Legacy format, still widely used |
+| **Binary** | `.bin` | iOS only | ✅ Supported | Legacy iOS format |
+
+### Recommended Models
+
+| Model | Size | Format | Best For | Download |
+|-------|------|---------|----------|----------|
+| **Gemma-3n E2B** | ~2B params | `.litertlm` | General use, latest features | [HuggingFace](https://huggingface.co/google/gemma-3n-E2B-it-litert-lm) |
+| **Gemma-3n E4B** | ~4B params | `.litertlm` | Higher accuracy | [HuggingFace](https://huggingface.co/google/gemma-3n-E4B-it-litert-lm) |
+| **Gemma-3 1B** | ~1B params | `.task`/`.litertlm` | Lightweight, fast | [HuggingFace](https://huggingface.co/litert-community/Gemma3-1B-IT) |
 
 ## API
 

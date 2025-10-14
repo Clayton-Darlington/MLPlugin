@@ -135,14 +135,16 @@ public class MLPlugin {
             try {
                 // Initialize LLM Inference if not already done
                 if (llmInference == null) {
-                    // Note: For a real implementation, you would need to download and specify a model file
-                    // For now, we'll provide a meaningful error about the missing model
+                    // Note: Download a model file to device storage, for example:
+                    // - gemma-3n-e2b.litertlm (recommended, latest format)  
+                    // - gemma-3-1b-it.task (legacy format)
+                    // Use adb push during development: adb push model.litertlm /data/local/tmp/llm/
                     LlmInferenceOptions options = LlmInferenceOptions.builder()
                             .setMaxTokens(maxTokens)
                             .setTemperature(temperature)
                             .setTopK(40)
                             .setRandomSeed(101)
-                            // .setModelPath("/data/local/tmp/llm/model.task") // Path to your downloaded model
+                            // .setModelPath("/data/local/tmp/llm/gemma-3n-e2b.litertlm") // Path to your downloaded model
                             .build();
                             
                     // This will fail without a real model, so we'll catch and provide a meaningful error
@@ -151,7 +153,7 @@ public class MLPlugin {
                         Logger.info("LLM Inference initialized successfully");
                     } catch (Exception e) {
                         Logger.error("Failed to initialize LLM Inference", e.getMessage(), e);
-                        result.put("error", "LLM model not found. Please download a compatible model file (e.g., gemma-3-1b-it.task) and set the correct path.");
+                        result.put("error", "LLM model not found. Please download a compatible model file (e.g., gemma-3n-e2b.litertlm or gemma-3-1b-it.task) and set the correct path.");
                         return result;
                     }
                 }

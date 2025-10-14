@@ -76,8 +76,10 @@ import MediaPipeTasksGenAI
         if llmInference == nil {
             do {
                 let options = LlmInferenceOptions()
-                // Note: For a real implementation, you would need to add a model file to your bundle
-                // For now, we'll create a stub that indicates the model is missing
+                // Note: Add a model file to your iOS bundle, for example:
+                // - gemma-3n-e2b.litertlm (recommended, latest format)
+                // - gemma-2-2b-it-gpu-int8.bin (legacy format)
+                // options.baseOptions.modelPath = Bundle.main.path(forResource: "gemma-3n-e2b", ofType: "litertlm")
                 options.maxTokens = maxTokens
                 options.temperature = temperature
                 options.randomSeed = 101
@@ -87,7 +89,7 @@ import MediaPipeTasksGenAI
                 print("LLM Inference initialized successfully")
             } catch {
                 print("Failed to initialize LLM Inference: \(error)")
-                completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "LLM model not found. Please add a compatible model file (e.g., gemma-2-2b-it-gpu-int8.bin) to your iOS app bundle."])))
+                completion(.failure(NSError(domain: "MLPlugin", code: 4, userInfo: [NSLocalizedDescriptionKey: "LLM model not found. Please add a compatible model file (e.g., gemma-3n-e2b.litertlm or gemma-2-2b-it-gpu-int8.bin) to your iOS app bundle."])))
                 return
             }
         }
