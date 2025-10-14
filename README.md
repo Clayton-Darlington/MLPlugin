@@ -15,13 +15,25 @@ npm install ml-plugin
 npx cap sync
 ```
 
-## iOS Setup
+## Platform Setup
 
-To use image classification on iOS, you need to add a CoreML model to your app:
+### iOS Setup
 
-1. Download a classification model (e.g., MobileNetV2 from Apple's ML Gallery)
-2. Add the `.mlmodelc` file to your iOS app bundle
-3. The plugin will automatically detect and use the model
+iOS implementation uses the built-in Vision framework and works out of the box:
+
+1. No additional setup required
+2. Uses Apple's built-in `VNClassifyImageRequest` 
+3. Requires iOS 13.0 or later
+4. All processing happens on-device using Apple's default models
+
+### Android Setup
+
+Android implementation uses Google's MLKit and works out of the box:
+
+1. No additional setup required
+2. MLKit will automatically download base models on first use
+3. Uses Google's on-device image labeling models
+4. Requires internet connection for initial model download
 
 ## Usage
 
@@ -123,5 +135,5 @@ Classify an image using Vision and CoreML (iOS only, stubs for other platforms)
 | Platform | Status | Notes |
 |----------|--------|-------|
 | iOS      | ✅ Full | Uses Vision + CoreML for image classification |
-| Android  | 🚧 Stub | Returns mock predictions |
+| Android  | ✅ Full | Uses MLKit for image classification |
 | Web      | 🚧 Stub | Returns mock predictions |
