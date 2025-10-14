@@ -7,10 +7,11 @@ window.testEcho = () => {
 
 window.testClassifyImage = async () => {
     try {
-        // Example image path - in a real app, you'd get this from a file picker or camera
-        const imagePath = '/path/to/your/test/image.jpg';
+        // Example base64 image - in a real app, you'd get this from Capacitor Camera plugin
+        // This is a small test image encoded as base64
+        const base64Image = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
         
-        const result = await MLPlugin.classifyImage({ imagePath });
+        const result = await MLPlugin.classifyImage({ base64Image });
         
         console.log('Classification results:', result);
         

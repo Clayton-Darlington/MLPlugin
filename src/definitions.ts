@@ -11,9 +11,9 @@ export interface ClassificationResult {
 
 export interface ClassifyImageOptions {
   /**
-   * Absolute path to the image file on the device
+   * Base64 encoded image data (with or without data URI prefix)
    */
-  imagePath: string;
+  base64Image: string;
 }
 
 export interface ClassifyImageResult {
@@ -32,13 +32,13 @@ export interface MLPluginPlugin {
   /**
    * Classify an image using Vision and CoreML (iOS only, stubs for other platforms)
    * 
-   * @param options - Configuration object containing the image path
+   * @param options - Configuration object containing the base64 image data
    * @returns Promise resolving to classification results
    * 
    * @example
    * ```typescript
    * const result = await MLPlugin.classifyImage({
-   *   imagePath: '/path/to/image.jpg'
+   *   base64Image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...'
    * });
    * console.log(result.predictions);
    * ```

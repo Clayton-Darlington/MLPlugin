@@ -22,14 +22,14 @@ public class MLPluginPlugin extends Plugin {
 
     @PluginMethod
     public void classifyImage(PluginCall call) {
-        String imagePath = call.getString("imagePath");
+        String base64Image = call.getString("base64Image");
         
-        if (imagePath == null) {
-            call.reject("imagePath is required");
+        if (base64Image == null) {
+            call.reject("base64Image is required");
             return;
         }
 
-        JSObject result = implementation.classifyImage(imagePath);
+        JSObject result = implementation.classifyImage(base64Image);
         call.resolve(result);
     }
 }

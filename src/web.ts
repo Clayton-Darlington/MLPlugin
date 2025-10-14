@@ -9,7 +9,7 @@ export class MLPluginWeb extends WebPlugin implements MLPluginPlugin {
   }
 
   async classifyImage(options: ClassifyImageOptions): Promise<ClassifyImageResult> {
-    console.log('classifyImage called on web with options:', options);
+    console.log('classifyImage called on web with base64 image length:', options.base64Image.length);
     // Stub implementation for web
     return {
       predictions: [

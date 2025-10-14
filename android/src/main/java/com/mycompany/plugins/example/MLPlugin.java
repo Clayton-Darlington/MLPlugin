@@ -11,8 +11,8 @@ public class MLPlugin {
         return value;
     }
 
-    public JSObject classifyImage(String imagePath) {
-        Logger.info("classifyImage called on Android with imagePath: " + imagePath);
+    public JSObject classifyImage(String base64Image) {
+        Logger.info("classifyImage called on Android with base64 image length: " + base64Image.length());
         
         // Stub implementation for Android
         JSObject result = new JSObject();

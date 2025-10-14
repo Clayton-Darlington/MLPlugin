@@ -26,11 +26,19 @@ To use image classification on iOS, you need to add a CoreML model to your app:
 ## Usage
 
 ```typescript
+import { Camera, CameraResultType } from '@capacitor/camera';
 import { MLPlugin } from 'ml-plugin';
 
-// Classify an image
+// Take a photo with the camera
+const image = await Camera.getPhoto({
+  quality: 90,
+  allowEditing: false,
+  resultType: CameraResultType.Base64
+});
+
+// Classify the photo
 const result = await MLPlugin.classifyImage({
-  imagePath: '/path/to/image.jpg'
+  base64Image: `data:image/jpeg;base64,${image.base64String}`
 });
 
 console.log(result.predictions);

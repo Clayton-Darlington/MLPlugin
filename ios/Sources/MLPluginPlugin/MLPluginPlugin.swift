@@ -23,12 +23,12 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     
     @objc func classifyImage(_ call: CAPPluginCall) {
-        guard let imagePath = call.getString("imagePath") else {
-            call.reject("imagePath is required")
+        guard let base64Image = call.getString("base64Image") else {
+            call.reject("base64Image is required")
             return
         }
         
-        implementation.classifyImage(imagePath: imagePath) { result in
+        implementation.classifyImage(base64Image: base64Image) { result in
             switch result {
             case .success(let predictions):
                 call.resolve([
