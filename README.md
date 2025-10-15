@@ -29,6 +29,45 @@ cd /dir/with/project
 npm link ml-plugin
 ```
 
+## Accessing Restricted Models
+
+Some models on Hugging Face are gated and require authentication to access. To use these models:
+
+### Getting a Hugging Face Access Token
+
+1. **Create a Hugging Face account** at [huggingface.co](https://huggingface.co)
+2. **Generate an access token**:
+   - Go to [Settings > Access Tokens](https://huggingface.co/settings/tokens)
+   - Click "New token" 
+   - Choose "Read" permissions (sufficient for downloading models)
+   - Copy the generated token (starts with `hf_`)
+
+### Requesting Access to Gated Models
+
+For restricted models like `gemma-3n-E2B-it-litert-lm`:
+1. Visit the model page on Hugging Face
+2. Click "Request access" if prompted
+3. Wait for approval (usually automatic for most models)
+
+### Using Authentication in Your App
+
+```typescript
+const result = await MLPlugin.generateText({
+  prompt: 'Your prompt here',
+  maxTokens: 150,
+  modelConfig: {
+    downloadAtRuntime: true,
+    downloadUrl: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm',
+    modelFileName: 'gemma-3n-e2b.litertlm',
+    authToken: 'hf_your_token_here' // Your Hugging Face token
+  }
+});
+```
+
+**Security Note**: Never hardcode tokens in your app. Use environment variables or secure storage:
+- **Development**: Use environment variables or config files (not committed to git)
+- **Production**: Use secure storage APIs or server-side token management
+
 ## Platform Setup
 
 ### iOS Setup
@@ -94,6 +133,22 @@ const textResultWithDownload = await MLPlugin.generateText({
     downloadAtRuntime: true,
     downloadUrl: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm',
     modelFileName: 'gemma-3n-e2b.litertlm'
+  }
+});
+
+// Generate text with restricted/gated model (requires Hugging Face token)
+const restrictedModelResult = await MLPlugin.generateText({
+  prompt: 'Write a creative story about space exploration',
+  maxTokens: 200,
+  temperature: 0.8,
+  modelConfig: {
+    downloadAtRuntime: true,
+    downloadUrl: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm',
+    modelFileName: 'gemma-3n-e2b-restricted.litertlm',
+    authToken: 'hf_your_hugging_face_token_here', // Required for gated models
+    headers: {
+      'User-Agent': 'MyApp/1.0'
+    }
   }
 });
 
@@ -236,6 +291,8 @@ Generate text using on-device LLM inference
 | **`downloadAtRuntime`** | <code>boolean</code> | Set to true to download model from URL instead of using bundled model |
 | **`downloadUrl`**      | <code>string</code>  | Direct download URL for the .litertlm model file        |
 | **`modelFileName`**    | <code>string</code>  | Local filename to save the downloaded model             |
+| **`authToken`**        | <code>string</code>  | Authentication token for accessing restricted/gated models (e.g., Hugging Face token) |
+| **`headers`**          | <code>{ [key: string]: string }</code> | Additional headers to include with download request |
 
 </docgen-api>
 

@@ -40,7 +40,9 @@ import MediaPipeTasksGenAIC
                 downloadAtRuntime: true,
                 downloadUrl: "https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/model.litertlm",
                 modelFileName: "gemma-3n-2b.litertlm",
-                maxTokens: 1000
+                maxTokens: 1000,
+                authToken: nil, // Will need to be provided by user for restricted models
+                headers: nil
             )
         }
     }
@@ -87,7 +89,7 @@ import MediaPipeTasksGenAIC
         }
     }
     
-    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, downloadAtRuntime: Bool = false, downloadUrl: String? = nil, modelFileName: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) async {
+    public func generateText(prompt: String, maxTokens: Int = 100, temperature: Float = 0.7, topK: Int? = nil, topP: Float? = nil, randomSeed: Int? = nil, downloadAtRuntime: Bool = false, downloadUrl: String? = nil, modelFileName: String? = nil, authToken: String? = nil, headers: [String: String]? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) async {
         print("generateText called on iOS with prompt: \(prompt)")
         
         // Wait for default model initialization if still in progress
@@ -101,7 +103,9 @@ import MediaPipeTasksGenAIC
                     downloadAtRuntime: downloadAtRuntime,
                     downloadUrl: downloadUrl,
                     modelFileName: modelFileName,
-                    maxTokens: maxTokens
+                    maxTokens: maxTokens,
+                    authToken: authToken,
+                    headers: headers
                 )
             }
         }
@@ -130,7 +134,7 @@ import MediaPipeTasksGenAIC
         }
     }
     
-    private func initializeLLMModel(downloadAtRuntime: Bool, downloadUrl: String?, modelFileName: String?, maxTokens: Int) async {
+    private func initializeLLMModel(downloadAtRuntime: Bool, downloadUrl: String?, modelFileName: String?, maxTokens: Int, authToken: String? = nil, headers: [String: String]? = nil) async {
         do {
             var modelPath: String?
             var currentModelName: String
@@ -138,7 +142,7 @@ import MediaPipeTasksGenAIC
             if downloadAtRuntime, let url = downloadUrl {
                 // Download model at runtime
                 print("Downloading model from: \(url)")
-                modelPath = try await downloadModel(from: url, fileName: modelFileName)
+                modelPath = try await downloadModel(from: url, fileName: modelFileName, authToken: authToken, headers: headers)
                 currentModelName = modelFileName ?? URL(string: url)?.lastPathComponent ?? "Downloaded Model"
             } else {
                 // Use bundled model
@@ -201,7 +205,7 @@ import MediaPipeTasksGenAIC
         return image
     }
     
-    private func downloadModel(from urlString: String, fileName: String?) async throws -> String {
+    private func downloadModel(from urlString: String, fileName: String?, authToken: String? = nil, headers: [String: String]? = nil) async throws -> String {
         guard let url = URL(string: urlString) else {
             throw NSError(domain: "MLPlugin", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid download URL: \(urlString)"])
         }
@@ -221,13 +225,44 @@ import MediaPipeTasksGenAIC
         
         print("Downloading model to: \(localFileURL.path)")
         
-        // Download the file using data task (compatible with iOS 13+)
-        let (data, response) = try await URLSession.shared.data(from: url)
+        // Create URL request with authentication if needed
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 600 // 10 minutes for large model downloads
+        
+        // Add authentication token if provided (for Hugging Face gated models)
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("Added authentication token for restricted model access")
+        }
+        
+        // Add custom headers if provided
+        if let customHeaders = headers {
+            for (key, value) in customHeaders {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+        }
+        
+        // Download the file using data task
+        let (data, response) = try await URLSession.shared.data(for: request)
         
         // Verify response
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw NSError(domain: "MLPlugin", code: 6, userInfo: [NSLocalizedDescriptionKey: "Download failed with response: \(response)"])
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "MLPlugin", code: 6, userInfo: [NSLocalizedDescriptionKey: "Invalid response type"])
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            let errorMessage: String
+            switch httpResponse.statusCode {
+            case 401:
+                errorMessage = "Authentication failed. Please check your access token."
+            case 403:
+                errorMessage = "Access forbidden. You may need to request access to this gated model."
+            case 404:
+                errorMessage = "Model not found at the specified URL."
+            default:
+                errorMessage = "Download failed with HTTP status code: \(httpResponse.statusCode)"
+            }
+            throw NSError(domain: "MLPlugin", code: 6, userInfo: [NSLocalizedDescriptionKey: errorMessage])
         }
         
         // Write data to local file

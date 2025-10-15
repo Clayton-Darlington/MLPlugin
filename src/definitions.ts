@@ -37,22 +37,44 @@ export interface LLMInferenceOptions {
    */
   temperature?: number;
   /**
+   * Top-K sampling parameter to limit vocabulary selection (optional)
+   */
+  topK?: number;
+  /**
+   * Top-P sampling parameter for nucleus sampling (0.0 to 1.0, optional)
+   */
+  topP?: number;
+  /**
+   * Random seed for reproducible generation (optional)
+   */
+  randomSeed?: number;
+  /**
    * Model configuration options
    */
-  modelConfig?: {
-    /**
-     * Whether to download the model at runtime instead of using bundled model
-     */
-    downloadAtRuntime?: boolean;
-    /**
-     * URL to download the model from (required if downloadAtRuntime is true)
-     */
-    downloadUrl?: string;
-    /**
-     * Local model filename to use (defaults based on URL or bundled model)
-     */
-    modelFileName?: string;
-  };
+  modelConfig?: ModelConfig;
+}
+
+export interface ModelConfig {
+  /**
+   * Whether to download the model at runtime instead of using bundled model
+   */
+  downloadAtRuntime?: boolean;
+  /**
+   * URL to download the model from (required if downloadAtRuntime is true)
+   */
+  downloadUrl?: string;
+  /**
+   * Local model filename to use (defaults based on URL or bundled model)
+   */
+  modelFileName?: string;
+  /**
+   * Authentication token for accessing restricted/gated models (e.g., Hugging Face token)
+   */
+  authToken?: string;
+  /**
+   * Additional headers to include with download request
+   */
+  headers?: { [key: string]: string };
 }
 
 export interface LLMInferenceResult {

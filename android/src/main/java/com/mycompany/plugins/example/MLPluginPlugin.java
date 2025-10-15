@@ -55,21 +55,28 @@ public class MLPluginPlugin extends Plugin {
 
         int maxTokens = call.getInt("maxTokens", 100);
         float temperature = call.getFloat("temperature", 0.7f);
+        Integer topK = call.getInt("topK") != null ? call.getInt("topK") : null;
+        Float topP = call.getFloat("topP") != null ? call.getFloat("topP") : null;
+        Integer randomSeed = call.getInt("randomSeed") != null ? call.getInt("randomSeed") : null;
         
         // Parse model configuration
         JSObject modelConfig = call.getObject("modelConfig");
         boolean downloadAtRuntime = false;
         String downloadUrl = null;
         String modelFileName = null;
+        String authToken = null;
+        JSObject headers = null;
         
         if (modelConfig != null) {
             downloadAtRuntime = modelConfig.getBool("downloadAtRuntime", false);
             downloadUrl = modelConfig.getString("downloadUrl");
             modelFileName = modelConfig.getString("modelFileName");
+            authToken = modelConfig.getString("authToken");
+            headers = modelConfig.getJSObject("headers");
         }
 
         // Handle async LLM processing
-        implementation.generateText(prompt, maxTokens, temperature, downloadAtRuntime, downloadUrl, modelFileName)
+        implementation.generateText(prompt, maxTokens, temperature, topK, topP, randomSeed, downloadAtRuntime, downloadUrl, modelFileName, authToken, headers)
             .thenAccept(result -> {
                 if (result.has("error")) {
                     call.reject(result.getString("error"));

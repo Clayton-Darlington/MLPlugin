@@ -49,21 +49,31 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
         
         let maxTokens = call.getInt("maxTokens") ?? 100
         let temperature = call.getFloat("temperature") ?? 0.7
+        let topK = call.getInt("topK")
+        let topP = call.getFloat("topP")
+        let randomSeed = call.getInt("randomSeed")
         
         // Parse model configuration
         let modelConfig = call.getObject("modelConfig")
         let downloadAtRuntime = modelConfig?["downloadAtRuntime"] as? Bool ?? false
         let downloadUrl = modelConfig?["downloadUrl"] as? String
         let modelFileName = modelConfig?["modelFileName"] as? String
+        let authToken = modelConfig?["authToken"] as? String
+        let headers = modelConfig?["headers"] as? [String: String]
         
         Task {
             await implementation.generateText(
                 prompt: prompt, 
                 maxTokens: maxTokens, 
                 temperature: temperature,
+                topK: topK,
+                topP: topP,
+                randomSeed: randomSeed,
                 downloadAtRuntime: downloadAtRuntime,
                 downloadUrl: downloadUrl,
-                modelFileName: modelFileName
+                modelFileName: modelFileName,
+                authToken: authToken,
+                headers: headers
             ) { result in
                 switch result {
                 case .success(let response):

@@ -132,7 +132,7 @@ public class MLPlugin {
         }
     }
     
-    private String downloadModel(String urlString, String fileName) throws IOException {
+    private String downloadModel(String urlString, String fileName, String authToken, JSObject headers) throws IOException {
         URL url = new URL(urlString);
         
         // Determine file name
@@ -158,15 +158,46 @@ public class MLPlugin {
         
         Logger.info("Downloading model to: " + localFile.getAbsolutePath());
         
-        // Download the file
+        // Download the file with authentication support
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
         connection.setConnectTimeout(30000); // 30 seconds
-        connection.setReadTimeout(300000);   // 5 minutes
+        connection.setReadTimeout(600000);   // 10 minutes for large models
+        
+        // Add authentication token if provided (for Hugging Face gated models)
+        if (authToken != null && !authToken.isEmpty()) {
+            connection.setRequestProperty("Authorization", "Bearer " + authToken);
+            Logger.info("Added authentication token for restricted model access");
+        }
+        
+        // Add custom headers if provided
+        if (headers != null) {
+            for (String key : headers.keySet()) {
+                String value = headers.getString(key);
+                if (value != null) {
+                    connection.setRequestProperty(key, value);
+                }
+            }
+        }
         
         int responseCode = connection.getResponseCode();
         if (responseCode != HttpURLConnection.HTTP_OK) {
-            throw new IOException("Download failed with response code: " + responseCode);
+            String errorMessage;
+            switch (responseCode) {
+                case HttpURLConnection.HTTP_UNAUTHORIZED:
+                    errorMessage = "Authentication failed. Please check your access token.";
+                    break;
+                case HttpURLConnection.HTTP_FORBIDDEN:
+                    errorMessage = "Access forbidden. You may need to request access to this gated model.";
+                    break;
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    errorMessage = "Model not found at the specified URL.";
+                    break;
+                default:
+                    errorMessage = "Download failed with HTTP status code: " + responseCode;
+                    break;
+            }
+            throw new IOException(errorMessage);
         }
         
         // Stream the download
@@ -188,7 +219,7 @@ public class MLPlugin {
         return localFile.getAbsolutePath();
     }
     
-    public CompletableFuture<JSObject> generateText(String prompt, int maxTokens, float temperature, boolean downloadAtRuntime, String downloadUrl, String modelFileName) {
+    public CompletableFuture<JSObject> generateText(String prompt, int maxTokens, float temperature, Integer topK, Float topP, Integer randomSeed, boolean downloadAtRuntime, String downloadUrl, String modelFileName, String authToken, JSObject headers) {
         Logger.info("generateText called on Android with prompt: " + prompt);
         
         return CompletableFuture.supplyAsync(() -> {
@@ -203,7 +234,7 @@ public class MLPlugin {
                         // Download model at runtime
                         Logger.info("Downloading model from: " + downloadUrl);
                         try {
-                            modelPath = downloadModel(downloadUrl, modelFileName);
+                            modelPath = downloadModel(downloadUrl, modelFileName, authToken, headers);
                         } catch (Exception e) {
                             Logger.error("Failed to download model", e.getMessage(), e);
                             result.put("error", "Failed to download model from " + downloadUrl + ": " + e.getMessage());
@@ -216,13 +247,25 @@ public class MLPlugin {
                         Logger.info("Using local model: " + modelPath);
                     }
                     
-                    LlmInferenceOptions options = LlmInferenceOptions.builder()
+                    LlmInferenceOptions.Builder optionsBuilder = LlmInferenceOptions.builder()
                             .setModelPath(modelPath)
                             .setMaxTokens(maxTokens)
-                            .setTemperature(temperature)
-                            .setTopK(40)
-                            .setRandomSeed(101)
-                            .build();
+                            .setTemperature(temperature);
+                    
+                    // Add optional parameters if provided
+                    if (topK != null) {
+                        optionsBuilder.setTopK(topK);
+                    } else {
+                        optionsBuilder.setTopK(40); // Default value
+                    }
+                    
+                    if (randomSeed != null) {
+                        optionsBuilder.setRandomSeed(randomSeed);
+                    } else {
+                        optionsBuilder.setRandomSeed(101); // Default value
+                    }
+                    
+                    LlmInferenceOptions options = optionsBuilder.build();
                             
                     try {
                         llmInference = LlmInference.createFromOptions(null, options);

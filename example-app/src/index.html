@@ -52,9 +52,33 @@
           </label>
         </div>
         
+        <div style="margin: 8px 0;">
+          <label for="authTokenInput">Hugging Face Token (for restricted models):</label>
+          <input type="password" id="authTokenInput" name="authTokenInput" 
+                 placeholder="hf_your_token_here" style="width: 100%; margin: 4px 0;" />
+          <small style="color: #666;">Optional: Required only for gated/restricted models</small>
+        </div>
+        
         <button onclick="testGenerateText()">Generate Text</button>
         <div id="textResults" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 100px;">
           Generated text will appear here...
+        </div>
+      </section>
+
+      <section style="margin-bottom: 2rem;">
+        <h2>Restricted Model Authentication Test</h2>
+        <p>
+          <strong>Note:</strong> This tests access to gated models on Hugging Face that require authentication.
+          You need a valid Hugging Face token with access to the model.
+        </p>
+        <p style="font-size: 14px; color: #666;">
+          Get your token at: <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">huggingface.co/settings/tokens</a><br>
+          Request model access at: <a href="https://huggingface.co/google/gemma-3n-E2B-it-litert-lm" target="_blank" rel="noopener">gemma-3n-E2B-it-litert-lm</a>
+        </p>
+        
+        <button onclick="testRestrictedModel()">Test Restricted Model Access</button>
+        <div id="restrictedModelResults" style="margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 100px;">
+          Restricted model test results will appear here...
         </div>
       </section>
     </main>
