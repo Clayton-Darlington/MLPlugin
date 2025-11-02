@@ -16,19 +16,36 @@ async function classifyPhoto() {
       resultType: CameraResultType.Base64
     });
 
-    // Classify the photo
+    // Classify/detect objects in the photo
     const result = await MLPlugin.classifyImage({
       base64Image: `data:image/jpeg;base64,${image.base64String}`
     });
     
-    console.log('Classification results:', result.predictions);
+    console.log('Detection results:', result.predictions);
     
-    // Result format:
+    // Result format (iOS with YOLOv8s - includes bounding boxes):
+    // {
+    //   predictions: [
+    //     { 
+    //       label: 'cat', 
+    //       confidence: 0.95,
+    //       boundingBox: { x: 0.2, y: 0.3, width: 0.4, height: 0.5 },
+    //       modelName: 'YOLOv8s'
+    //     },
+    //     { 
+    //       label: 'dog', 
+    //       confidence: 0.88,
+    //       boundingBox: { x: 0.5, y: 0.4, width: 0.3, height: 0.4 },
+    //       modelName: 'YOLOv8s'
+    //     }
+    //   ]
+    // }
+    //
+    // Result format (Android with MLKit - classification only):
     // {
     //   predictions: [
     //     { label: 'cat', confidence: 0.95 },
-    //     { label: 'dog', confidence: 0.03 },
-    //     { label: 'bird', confidence: 0.01 }
+    //     { label: 'dog', confidence: 0.03 }
     //   ]
     // }
     
@@ -178,8 +195,8 @@ async function generateTextSecurely() {
 
 ## Platform Support
 
-- **iOS**: Full implementation using MLKit + MediaPipe LLM
-- **Android**: Full implementation using MLKit + MediaPipe LLM  
+- **iOS**: Object detection using YOLOv8s (Vision + CoreML) + MediaPipe LLM
+- **Android**: Image classification using Google MLKit + MediaPipe LLM  
 - **Web**: Stub implementation (returns mock data)
 
 ## Model Formats Supported
@@ -223,12 +240,24 @@ const result = await MLPlugin.generateText({
 **Pros**: Smaller app size, updatable models, A/B testing  
 **Cons**: Requires network, potential download failures
 
-The iOS implementation expects a classification model that outputs `VNClassificationObservation` results. Popular models that work well:
+## Object Detection Models (iOS)
 
-- MobileNetV2
-- ResNet50
-- SqueezeNet
-- Custom trained classification models
+The iOS implementation uses YOLOv8s for object detection, which provides:
+- Real-time object detection with bounding boxes
+- Support for 80+ object classes (COCO dataset)
+- Confidence scores for each detection
+- Multiple objects detected per image
+
+**YOLOv8s Model Setup:**
+1. Export YOLOv8s to CoreML format (`.mlmodel` or `.mlmodelc`)
+2. Add the model file to your iOS app's Xcode project
+3. Ensure the file is named `yolov8s.mlmodel` or `yolov8s.mlmodelc`
+4. The plugin automatically loads and uses the model
+
+**Alternative object detection models:**
+- YOLOv8n (nano) - Faster, less accurate
+- YOLOv8m (medium) - Slower, more accurate
+- Custom trained YOLO models in CoreML format
 
 ## Error Handling
 

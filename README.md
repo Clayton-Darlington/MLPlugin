@@ -4,7 +4,9 @@ ML Plugin with Image Classification using Vision and CoreML
 
 ## Features
 
-- **Image Classification**: Classify images using Google MLKit on iOS and Android
+- **Image Classification/Object Detection**: 
+  - iOS: YOLOv8s object detection using Vision and CoreML
+  - Android: Google MLKit image labeling
 - **LLM Text Generation**: Generate text using MediaPipe LLM Inference on iOS and Android
 - **Cross-platform**: Full native implementations for iOS and Android, stubs for Web
 - **Device-only processing**: All processing happens on-device for privacy
@@ -72,9 +74,19 @@ const result = await MLPlugin.generateText({
 
 ### iOS Setup
 
-**Image Classification**: Uses Google MLKit (same as Android)
-- No additional setup required - works out of the box
-- MLKit automatically downloads base models on first use
+**Object Detection**: Uses YOLOv8s with Vision and CoreML
+- **Required**: Add `yolov8s.mlmodel` or `yolov8s.mlmodelc` to your iOS app bundle
+- The model file should be installed by your app (e.g., downloaded or bundled)
+- Supports object detection with bounding boxes and confidence scores
+- No external dependencies required - uses built-in Vision and CoreML frameworks
+
+**How to add YOLOv8s model to your iOS app:**
+1. Export YOLOv8s model to CoreML format (`.mlmodel` or `.mlmodelc`)
+2. Open your iOS app in Xcode
+3. Drag and drop the `yolov8s.mlmodel` file into your Xcode project
+4. Ensure "Copy items if needed" is checked
+5. Add the file to your app target
+6. The plugin will automatically load the model from the bundle
 
 **LLM Text Generation**: Uses MediaPipe LLM Inference
 - Requires adding a compatible model file to your iOS app bundle
@@ -298,11 +310,11 @@ Generate text using on-device LLM inference
 
 ## Platform Support
 
-| Platform | Image Classification | LLM Text Generation | Model Loading | Notes |
-|----------|---------------------|-------------------|---------------|-------|
-| iOS      | ✅ Google MLKit      | ✅ MediaPipe LLM   | Bundle + Download | Supports both bundled models and runtime downloads |
-| Android  | ✅ Google MLKit      | ✅ MediaPipe LLM   | Bundle + Download | Supports both bundled models and runtime downloads |
-| Web      | 🚧 Stub             | 🚧 Stub           | N/A           | Returns mock responses |
+| Platform | Image Classification/Detection | LLM Text Generation | Model Loading | Notes |
+|----------|-------------------------------|-------------------|---------------|-------|
+| iOS      | ✅ YOLOv8s (Object Detection) | ✅ MediaPipe LLM   | Bundle (required) | Requires yolov8s.mlmodel in app bundle |
+| Android  | ✅ Google MLKit               | ✅ MediaPipe LLM   | Bundle + Download | Supports both bundled models and runtime downloads |
+| Web      | 🚧 Stub                       | 🚧 Stub           | N/A           | Returns mock responses |
 
 ## Deployment Considerations
 

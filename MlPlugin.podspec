@@ -13,8 +13,8 @@ Pod::Spec.new do |s|
   s.source_files = 'ios/Sources/**/*.{swift,h,m,c,cc,mm,cpp}'
   s.ios.deployment_target = '14.0'
   s.dependency 'Capacitor'
-  s.dependency 'GoogleMLKit/ImageLabeling', '~> 4.0.0'
-  s.dependency 'MediaPipeTasksGenAI'
-  s.dependency 'MediaPipeTasksGenAIC'
   s.swift_version = '5.1'
+  
+  # YOLOv8s uses Vision and CoreML frameworks (built into iOS)
+  s.frameworks = 'Vision', 'CoreML'
 end
