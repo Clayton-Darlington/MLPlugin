@@ -11,7 +11,8 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "MLPlugin"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "classifyImage", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "classifyImage", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "detectObjects", returnType: CAPPluginReturnPromise)
     ]
     private let implementation = MLPlugin()
 
@@ -36,6 +37,24 @@ public class MLPluginPlugin: CAPPlugin, CAPBridgedPlugin {
                 ])
             case .failure(let error):
                 call.reject("Classification failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    @objc func detectObjects(_ call: CAPPluginCall) {
+        guard let base64Image = call.getString("base64Image") else {
+            call.reject("base64Image is required")
+            return
+        }
+        
+        implementation.detectObjects(base64Image: base64Image) { result in
+            switch result {
+            case .success(let detections):
+                call.resolve([
+                    "detections": detections
+                ])
+            case .failure(let error):
+                call.reject("Object detection failed: \(error.localizedDescription)")
             }
         }
     }

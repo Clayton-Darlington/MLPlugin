@@ -1,6 +1,6 @@
 import { WebPlugin } from '@capacitor/core';
 
-import type { MLPluginPlugin, ClassifyImageOptions, ClassifyImageResult, LLMInferenceOptions, LLMInferenceResult } from './definitions';
+import type { MLPluginPlugin, ClassifyImageOptions, ClassifyImageResult, DetectObjectsOptions, DetectObjectsResult, LLMInferenceOptions, LLMInferenceResult } from './definitions';
 
 export class MLPluginWeb extends WebPlugin implements MLPluginPlugin {
   async echo(options: { value: string }): Promise<{ value: string }> {
@@ -14,6 +14,26 @@ export class MLPluginWeb extends WebPlugin implements MLPluginPlugin {
     return {
       predictions: [
         { label: 'web-stub-prediction', confidence: 0.95 }
+      ]
+    };
+  }
+
+  async detectObjects(options: DetectObjectsOptions): Promise<DetectObjectsResult> {
+    console.log('detectObjects called on web with base64 image length:', options.base64Image.length);
+    // Stub implementation for web
+    return {
+      detections: [
+        {
+          label: 'web-stub-object',
+          confidence: 0.85,
+          boundingBox: {
+            x: 0.1,
+            y: 0.2,
+            width: 0.5,
+            height: 0.6
+          },
+          modelName: 'web-stub'
+        }
       ]
     };
   }
